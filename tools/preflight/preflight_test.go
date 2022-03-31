@@ -29,96 +29,181 @@ const (
 	dummyProvisioner  = "dummy-provisioner"
 )
 
-func preflightTestCases(serverVersion string) {
+func preflightCSITestcases(serverVersion string) {
 
-	Describe("Preflight unit test cases", func() {
+	Describe("Preflight run command volume snapshot CRD test cases", func() {
 
-		Describe("Preflight run command volume snapshot CRD test cases", func() {
-
-			AfterEach(func() {
-				deleteAllVolumeSnapshotCRD()
-			})
-
-			Context("When preflight run command executed with/without volume snapshot CRD on cluster", func() {
-
-				It("Should skip installation if all volume snapshot CRDs are present", func() {
-					vsCRDsMap := map[string]bool{vsClassCRD: true, vsContentCRD: true, vsCRD: true}
-					installVolumeSnapshotCRD(serverVersion, vsCRDsMap)
-					Expect(run.checkAndCreateVolumeSnapshotCRDs(ctx, serverVersion)).To(BeNil())
-					checkVolumeSnapshotCRDExists()
-				})
-
-				for i, crd := range VolumeSnapshotCRDs {
-					vsCRDsMap := map[string]bool{vsClassCRD: true, vsContentCRD: true, vsCRD: true}
-					It(fmt.Sprintf("Should install missing volume snapshot CRD %s when it is not present", crd), func() {
-						vsCRDsMap[VolumeSnapshotCRDs[i]] = false
-						installVolumeSnapshotCRD(serverVersion, vsCRDsMap)
-						Expect(run.checkAndCreateVolumeSnapshotCRDs(ctx, serverVersion)).To(BeNil())
-						checkVolumeSnapshotCRDExists()
-					})
-				}
-
-				It("Should install all volume snapshot CRDs when none of them are present", func() {
-					deleteAllVolumeSnapshotCRD()
-					Expect(run.checkAndCreateVolumeSnapshotCRDs(ctx, serverVersion)).To(BeNil())
-					checkVolumeSnapshotCRDExists()
-				})
-
-			})
-
+		AfterEach(func() {
+			deleteAllVolumeSnapshotCRD()
 		})
 
-		Describe("Preflight run command volume snapshot class test cases", func() {
+		Context("When preflight run command executed with/without volume snapshot CRD on cluster", func() {
 
-			var (
-				crVersion string
-				err       error
-			)
-
-			BeforeEach(func() {
+			It("Should skip installation if all volume snapshot CRDs are present", func() {
 				vsCRDsMap := map[string]bool{vsClassCRD: true, vsContentCRD: true, vsCRD: true}
 				installVolumeSnapshotCRD(serverVersion, vsCRDsMap)
-				crVersion, err = getPrefSnapshotClassVersion(serverVersion)
-				Expect(err).To(BeNil())
+				Expect(runOps.checkAndCreateVolumeSnapshotCRDs(ctx, serverVersion, contClient)).To(BeNil())
+				checkVolumeSnapshotCRDExists()
 			})
 
-			AfterEach(func() {
-				deleteAllVolumeSnapshotClass(crVersion)
+			for i, crd := range VolumeSnapshotCRDs {
+				vsCRDsMap := map[string]bool{vsClassCRD: true, vsContentCRD: true, vsCRD: true}
+				It(fmt.Sprintf("Should install missing volume snapshot CRD %s when it is not present", crd), func() {
+					vsCRDsMap[VolumeSnapshotCRDs[i]] = false
+					installVolumeSnapshotCRD(serverVersion, vsCRDsMap)
+					Expect(runOps.checkAndCreateVolumeSnapshotCRDs(ctx, serverVersion, contClient)).To(BeNil())
+					checkVolumeSnapshotCRDExists()
+				})
+			}
+
+			It("Should install all volume snapshot CRDs when none of them are present", func() {
 				deleteAllVolumeSnapshotCRD()
-			})
-
-			Context("When preflight run command executed with/without volume snapshot class on cluster", func() {
-
-				It("Should skip installation if volume snapshot class is present", func() {
-					installVolumeSnapshotClass(crVersion, dummyProvisioner, defaultVSCName)
-					Expect(run.checkStorageSnapshotClass(ctx, dummyProvisioner, crVersion)).To(BeNil())
-					checkVolumeSnapshotClassExists(crVersion, defaultVSCName)
-				})
-
-				It("Should install volume snapshot class with default name when volume snapshot class doesn't exists", func() {
-					deleteAllVolumeSnapshotClass(crVersion)
-					Expect(run.checkStorageSnapshotClass(ctx, dummyProvisioner, crVersion)).To(BeNil())
-					checkVolumeSnapshotClassExists(crVersion, defaultVSCName)
-				})
-
-				It("Should install volume snapshot class with default name when volume snapshot class exists but with"+
-					" a different driver", func() {
-					installVolumeSnapshotClass(crVersion, "dummy-provisioner-2", "another-snapshot-class")
-					Expect(run.checkStorageSnapshotClass(ctx, dummyProvisioner, crVersion)).To(BeNil())
-					checkVolumeSnapshotClassExists(crVersion, defaultVSCName)
-				})
-
+				Expect(runOps.checkAndCreateVolumeSnapshotCRDs(ctx, serverVersion, contClient)).To(BeNil())
+				checkVolumeSnapshotCRDExists()
 			})
 
 		})
 
 	})
 
+	Describe("Preflight run command volume snapshot class test cases", func() {
+
+		var (
+			crVersion string
+			err       error
+		)
+
+		BeforeEach(func() {
+			vsCRDsMap := map[string]bool{vsClassCRD: true, vsContentCRD: true, vsCRD: true}
+			installVolumeSnapshotCRD(serverVersion, vsCRDsMap)
+			crVersion, err = getPrefSnapshotClassVersion(serverVersion)
+			Expect(err).To(BeNil())
+		})
+
+		AfterEach(func() {
+			deleteAllVolumeSnapshotClass(crVersion)
+			deleteAllVolumeSnapshotCRD()
+		})
+
+		Context("When preflight run command executed with/without volume snapshot class on cluster", func() {
+
+			It("Should skip installation if volume snapshot class is present", func() {
+				installVolumeSnapshotClass(crVersion, dummyProvisioner, defaultVSCName)
+				Expect(runOps.checkStorageSnapshotClass(ctx, dummyProvisioner, crVersion, k8sClient, contClient)).To(BeNil())
+				checkVolumeSnapshotClassExists(crVersion, defaultVSCName)
+			})
+
+			It("Should install volume snapshot class with default name when volume snapshot class doesn't exists", func() {
+				deleteAllVolumeSnapshotClass(crVersion)
+				Expect(runOps.checkStorageSnapshotClass(ctx, dummyProvisioner, crVersion, k8sClient, contClient)).To(BeNil())
+				checkVolumeSnapshotClassExists(crVersion, defaultVSCName)
+			})
+
+			It("Should install volume snapshot class with default name when volume snapshot class exists but with"+
+				" a different driver", func() {
+				installVolumeSnapshotClass(crVersion, "dummy-provisioner-2", "another-snapshot-class")
+				Expect(runOps.checkStorageSnapshotClass(ctx, dummyProvisioner, crVersion, k8sClient, contClient)).To(BeNil())
+				checkVolumeSnapshotClassExists(crVersion, defaultVSCName)
+			})
+
+		})
+
+	})
+}
+
+func preflightFuncsTestcases() {
+	Describe("Preflight kubectl binary check test cases", func() {
+
+		Context("Check whether kubectl binary is present on the system", func() {
+
+			It("Should be able to find kubectl binary when correct binary name is provided", func() {
+				err := runOps.checkKubectl(kubectlBinaryName)
+				Expect(err).To(BeNil())
+			})
+
+			It("Should return error when invalid kubectl binary name is provided", func() {
+				err := runOps.checkKubectl(invalidKubectlBinaryName)
+				Expect(err).ToNot(BeNil())
+				Expect(err.Error()).To(ContainSubstring(
+					fmt.Sprintf("error finding '%s' binary in $PATH of the system ::", invalidKubectlBinaryName)))
+			})
+		})
+	})
+
+	Describe("Preflight helm binary check test cases", func() {
+
+		Context("When valid/invalid helm binary name is provided", func() {
+
+			Context("When helm binary does not satisfy minimum version requirement", func() {
+
+				It("Should return error when helm version does not satisfy the minimum required helm version", func() {
+					err := runOps.validateHelmVersion(invalidHelmVersion)
+					Expect(err).ToNot(BeNil())
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(
+						"helm does not meet minimum version requirement.\nUpgrade helm to minimum version - %s", MinHelmVersion)))
+				})
+
+			})
+
+			It("Should pass helm check if correct binary name is provided", func() {
+				err := runOps.checkHelmVersion(HelmBinaryName, k8sDiscClient)
+				Expect(err).To(BeNil())
+			})
+
+			It("Should fail helm binary check if invalid binary name is provided", func() {
+				err := runOps.checkHelmVersion(invalidHelmBinaryName, k8sDiscClient)
+				Expect(err).ToNot(BeNil())
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(
+					"error finding '%s' binary in $PATH of the system ::", invalidHelmBinaryName)))
+			})
+		})
+	})
+
+	Describe("Preflight kubernetes server version check test cases", func() {
+
+		Context("When kubernetes server version satisfy/not satisfy minimum version requirement", func() {
+
+			It("Should pass kubernetes server version check if minimum version provided is >= threshold minimum version", func() {
+				err := runOps.checkKubernetesVersion(testMinK8sVersion, k8sClient)
+				Expect(err).To(BeNil())
+			})
+
+			It("Should return error when kubernetes server version is less than the minimum required version", func() {
+				err := runOps.checkKubernetesVersion(invalidK8sVersion, k8sClient)
+				Expect(err).ToNot(BeNil())
+				Expect(err.Error()).To(ContainSubstring("kubernetes server version does not meet minimum requirements"))
+			})
+		})
+	})
+
+	Context("Check rbac-API group and version on the cluster", func() {
+
+		It("Should pass RBAC check when correct rbac-API group and version is provided", func() {
+			err := runOps.checkKubernetesRBAC(RBACAPIGroup, RBACAPIVersion, k8sDiscClient)
+			Expect(err).To(BeNil())
+		})
+
+		It("Should return error when rbac-API group and version is not present on server", func() {
+			err := runOps.checkKubernetesRBAC(invalidRBACAPIGroup, RBACAPIVersion, k8sDiscClient)
+			Expect(err).ToNot(BeNil())
+			Expect(err.Error()).To(Equal("not enabled kubernetes RBAC"))
+		})
+	})
+
+	Context("Generate a random and unique 6-length preflight UID", func() {
+		It("Should create uid of length 6", func() {
+			uid, err := CreateResourceNameSuffix()
+			Expect(err).To(BeNil())
+			Expect(len(uid)).To(Equal(6))
+		})
+	})
 }
 
 var _ = Context("Preflight Unit Tests", func() {
-	preflightTestCases(v1beta1K8sVersion)
-	preflightTestCases(v1K8sVersion)
+	preflightCSITestcases(v1beta1K8sVersion)
+	preflightCSITestcases(v1K8sVersion)
+
+	preflightFuncsTestcases()
 })
 
 func installVolumeSnapshotCRD(version string, volumeSnapshotCRDToInstall map[string]bool) {
@@ -134,10 +219,10 @@ func installVolumeSnapshotCRD(version string, volumeSnapshotCRDToInstall map[str
 
 			Expect(yaml.Unmarshal(fileBytes, crdObj)).To(BeNil())
 
-			Expect(k8sClient.Create(ctx, crdObj)).To(BeNil())
+			Expect(contClient.Create(ctx, crdObj)).To(BeNil())
 			Eventually(func() error {
 				volSnapCRDObj := &apiextensions.CustomResourceDefinition{}
-				return k8sClient.Get(ctx, types.NamespacedName{Name: VolumeSnapshotCRDs[i]}, volSnapCRDObj)
+				return contClient.Get(ctx, types.NamespacedName{Name: VolumeSnapshotCRDs[i]}, volSnapCRDObj)
 			}, timeout, interval).ShouldNot(HaveOccurred())
 		}
 	}
@@ -156,11 +241,11 @@ func installVolumeSnapshotClass(version, driver, vscName string) {
 	}
 	vscUnstrObj.SetGroupVersionKind(vscGVK)
 	vscUnstrObj.SetName(vscName)
-	Expect(k8sClient.Create(ctx, vscUnstrObj)).To(BeNil())
+	Expect(contClient.Create(ctx, vscUnstrObj)).To(BeNil())
 	Eventually(func() error {
 		vscObj := &unstructured.Unstructured{}
 		vscObj.SetGroupVersionKind(vscGVK)
-		return k8sClient.Get(ctx, types.NamespacedName{Name: vscName}, vscObj)
+		return contClient.Get(ctx, types.NamespacedName{Name: vscName}, vscObj)
 	}, timeout, interval).ShouldNot(HaveOccurred())
 }
 
@@ -169,7 +254,7 @@ func checkVolumeSnapshotCRDExists() {
 		crdObj := &apiextensions.CustomResourceDefinition{}
 		crdObj.SetName(crd)
 		Eventually(func() error {
-			return k8sClient.Get(ctx, types.NamespacedName{Name: crd}, crdObj)
+			return contClient.Get(ctx, types.NamespacedName{Name: crd}, crdObj)
 		}, timeout, interval).ShouldNot(HaveOccurred())
 	}
 }
@@ -183,7 +268,7 @@ func checkVolumeSnapshotClassExists(version, vscName string) {
 	})
 	vscUnstrObj.SetName(vscName)
 	Eventually(func() error {
-		return k8sClient.Get(ctx, types.NamespacedName{Name: vscName}, vscUnstrObj)
+		return contClient.Get(ctx, types.NamespacedName{Name: vscName}, vscUnstrObj)
 	}, timeout, interval).ShouldNot(HaveOccurred())
 }
 
@@ -192,11 +277,11 @@ func deleteAllVolumeSnapshotCRD() {
 		crdObj := &apiextensions.CustomResourceDefinition{}
 		crdObj.SetName(crd)
 		Eventually(func() bool {
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: crd}, crdObj)
+			err := contClient.Get(ctx, types.NamespacedName{Name: crd}, crdObj)
 			if k8serrors.IsNotFound(err) {
 				return true
 			}
-			Expect(k8sClient.Delete(ctx, crdObj)).To(BeNil())
+			Expect(contClient.Delete(ctx, crdObj)).To(BeNil())
 			return false
 		}, timeout, interval).Should(BeTrue())
 	}
@@ -211,18 +296,18 @@ func deleteAllVolumeSnapshotClass(version string) {
 	vscUnstrObjList := &unstructured.UnstructuredList{}
 	vscUnstrObjList.SetGroupVersionKind(vscGVK)
 	Eventually(func() error {
-		return k8sClient.List(ctx, vscUnstrObjList)
+		return contClient.List(ctx, vscUnstrObjList)
 	}, timeout, interval).ShouldNot(HaveOccurred())
 
 	for _, vsc := range vscUnstrObjList.Items {
 		vscUnstrObj := &unstructured.Unstructured{}
 		vscUnstrObj.SetGroupVersionKind(vscGVK)
 		Eventually(func() bool {
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: vsc.GetName()}, vscUnstrObj)
+			err := contClient.Get(ctx, types.NamespacedName{Name: vsc.GetName()}, vscUnstrObj)
 			if k8serrors.IsNotFound(err) {
 				return true
 			}
-			Expect(k8sClient.Delete(ctx, vscUnstrObj)).To(BeNil())
+			Expect(contClient.Delete(ctx, vscUnstrObj)).To(BeNil())
 			return false
 		}, timeout, interval).Should(BeTrue())
 	}
