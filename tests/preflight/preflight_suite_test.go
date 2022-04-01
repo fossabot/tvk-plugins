@@ -12,12 +12,10 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"github.com/trilioData/tvk-plugins/cmd/preflight/cmd"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -171,11 +169,8 @@ var (
 
 func TestPreflight(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("junit-preflight.xml")
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Preflight Test Suite",
-		[]Reporter{junitReporter},
-	)
+	//junitReporter := reporters.NewJUnitReporter("junit-preflight.xml")
+	RunSpecs(t, "Preflight Test Suite")
 }
 
 var _ = BeforeSuite(func() {

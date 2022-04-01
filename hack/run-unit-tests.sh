@@ -10,8 +10,8 @@ export KUBEBUILDER_VERSION="2.3.2"
 run_tests() {
   components=("$@")
 
-  GO111MODULE=on go install github.com/onsi/ginkgo/ginkgo@v1.16.4
-  ginkgo -r -keepGoing "${components[@]}"
+  GO111MODULE=on go get github.com/onsi/ginkgo/v2/ginkgo
+  ginkgo -r -keep-going "${components[@]}"
 }
 
 # install kubebuilder for env tests
