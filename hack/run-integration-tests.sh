@@ -96,7 +96,7 @@ run_tests() {
   sudo apt-get install -y nfs-common
 
   GO111MODULE=on go get github.com/onsi/ginkgo/v2/ginkgo
-  ginkgo -r -keep-going "${components[@]}" --junit-report=junit-test-report.xml
+  ginkgo -r -keep-going "${components[@]}" --junit-report=tests/"${job_name}"/"${job_name}"-report.xml
 }
 
 if [[ "${job_name}" == "target-browser" ]]; then

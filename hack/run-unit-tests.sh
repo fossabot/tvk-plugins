@@ -11,7 +11,7 @@ run_tests() {
   components=("$@")
 
   GO111MODULE=on go get github.com/onsi/ginkgo/v2/ginkgo
-  ginkgo -r -keep-going "${components[@]}"
+  ginkgo -r -keep-going "${components[@]}" --junit-report=junit-test-report.xml
 }
 
 # install kubebuilder for env tests
